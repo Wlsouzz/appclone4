@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, Alert, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { auth } from './firebaseConfig'; // Verifique se o caminho está correto
 import { signOut } from 'firebase/auth';
+import firestore from '@react-native-firebase/firestore'; // Importando o Firestore
 
 const HomeScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [user, setUser] = useState(null);
+  const [profilePicture, setProfilePicture] = useState(null); // Estado para armazenar a URL da foto de perfil
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         setUser(user); // Armazena o usuário logado
+        // Aqui você pode recuperar a URL da foto de perfil do Firestore ou do Firebase Realtime Database
+        const userDoc = await firestore().collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          setProfilePicture(userDoc.data().profilePicture); // Recupera a URL da foto de perfil
+        }
       } else {
         navigation.navigate('Login'); // Redireciona para a tela de login se não houver usuário
       }
@@ -33,8 +40,8 @@ const HomeScreen = ({ navigation }) => {
 
   const menuItems = [
     { title: 'Home', onPress: () => navigation.navigate('Home') },
-    { title: 'Login', onPress: () => navigation.navigate('Login') },
-    { title: 'Cadastro', onPress: () => navigation.navigate('Cadastro') },
+    { title: 'Calculadora', onPress: () => navigation.navigate('Calculadora') },
+    { title: 'Pia', onPress: () => navigation.navigate('Pia') },
     { title: 'Contato', onPress: () => navigation.navigate('Contato') },
     { title: 'Sair', onPress: handleLogout }, // Adicionado o logout ao menu
   ];
@@ -42,33 +49,49 @@ const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        {/* Foto de perfil à esquerda */}
+        <View style={styles.profileContainer}>
+          {profilePicture ? (
+            <Image source={{ uri: profilePicture }} style={styles.profileImage} />
+          ) : (
+            <Icon name="user-circle" size={40} color="#fff" />
+          )}
+        </View>
+
+        {/* Nome do usuário à direita da foto */}
+        <Text style={styles.userName}>Olá, {user ? user.email : 'Visitante'}!</Text>
+
         <TouchableOpacity style={styles.menuIcon} onPress={() => setModalVisible(true)}>
           <Icon name="bars" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.userName}>Olá, {user ? user.email : 'Visitante'}!</Text>
       </View>
 
       <View style={styles.content}>
-        <View style={styles.cardContainer}>
-          <View style={styles.card}>
-            <Icon name="calculator" size={28} color="#0074d9" />
-            <Text style={styles.cardTitle}>Calculadora Hídrica</Text>
-            <Text style={styles.cardDescription}>Calcule seu consumo de água.</Text>
-          </View>
-          <View style={styles.card}>
-            <Icon name="tint" size={28} color="#0074d9" />
-            <Text style={styles.cardTitle}>Água Virtual</Text>
-            <Text style={styles.cardDescription}>Entenda o conceito de água virtual.</Text>
-          </View>
-          <View style={styles.card}>
-  <TouchableOpacity onPress={() => navigation.navigate('Contato')}>
-    <Icon name="users" size={28} color="#0074d9" />
-    <Text style={styles.cardTitle}>Contato</Text>
-    <Text style={styles.cardDescription}>Entre em contato conosco.</Text>
+      <View style={styles.cardContainer}>
+  <TouchableOpacity 
+    style={styles.card} 
+    onPress={() => navigation.navigate('Calculadora')} // Navega para a tela Calculadora
+  >
+    <Icon name="calculator" size={28} color="#0074d9" />
+    <Text style={styles.cardTitle}>Calculadora Hídrica</Text>
+    <Text style={styles.cardDescription}>Calcule seu consumo de água.</Text>
   </TouchableOpacity>
+
+  <View style={styles.card}>
+    <Icon name="tint" size={28} color="#0074d9" />
+    <Text style={styles.cardTitle}>Água Virtual</Text>
+    <Text style={styles.cardDescription}>Entenda o conceito de água virtual.</Text>
+  </View>
+
+  <View style={styles.card}>
+    <TouchableOpacity onPress={() => navigation.navigate('Contato')}>
+      <Icon name="users" size={28} color="#0074d9" />
+      <Text style={styles.cardTitle}>Contato</Text>
+      <Text style={styles.cardDescription}>Entre em contato conosco.</Text>
+    </TouchableOpacity>
+  </View>
 </View>
 
-        </View>
       </View>
 
       <Modal animationType="slide" transparent={true} visible={modalVisible}>
@@ -124,9 +147,17 @@ const styles = StyleSheet.create({
   menuIcon: {
     paddingRight: 16,
   },
+  profileContainer: {
+    marginRight: 10, // Espaço entre a foto e o nome
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
   userName: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left', // Alinha o texto à esquerda
     fontSize: 18,
     color: '#fff',
   },
